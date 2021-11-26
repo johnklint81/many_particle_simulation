@@ -114,7 +114,7 @@ disc_vector = np.linspace(0, 2 * np.pi, 100)
 position_array *= 1e6    # scale for micrometer
 box_size *= 1e6
 R *= 1e6
-print(position_array)
+
 # color = ["#"+''.join([random.choice('0123456789ABCDEF') for j in range(6)])
 #              for i in range(n_particles)]
 #
@@ -131,7 +131,8 @@ for i in range(n_particles):
              c='k')
     ax1.plot(position_array[i, 0, 0] + R * np.cos(disc_vector), position_array[i, 1, 0] + R * np.sin(disc_vector),
              c='k', alpha=0.4)
-    ax1.plot(position_array[i, 0, :], position_array[i, 1, :], 'k', alpha=0.8)
+    ax1.plot(position_array[i, 0, :], position_array[i, 1, :], 'k', alpha=0.5)
+
 ax1.set_aspect('equal')
 ax1.set_xlabel('x [$\\mu$m]')
 ax1.set_xlim([0, box_size])

@@ -6,13 +6,13 @@ R = 1e-6
 D_T = 1 * 1e-13
 D_R = 1
 v = 3e-6
-v0 = 200 * 1e-6
+v0 = 50 * 1e-6
 delta_t = 0.1
 variance = 1
 parameters = np.array([R, D_T, D_R, v, delta_t, variance])
 n_particles = 50
-n_timesteps = 1000
-box_size = 1e-4
+n_timesteps = 500
+box_size = 100 * 1e-6
 cut_off_distance = 8 * R
 
 position_list = np.zeros([n_particles, 2])
@@ -51,10 +51,10 @@ def simulate_motion(_position, _phi, _phoretic_velocity, _delta_t, _D_T, _D_R, _
 
 
 def phoretic_interaction(_v0, _R, _position1, _position2, _cut_off_distance):
-    _distance = np.linalg.norm(_position1 - _position2)
+    _distance = np.linalg.norm(_position2 - _position1)
     if (_distance < _cut_off_distance) and (_distance != 0):
         _direction = (_position2 - _position1) / _distance
-        _phoretic_velocity = _v0 * R ** 2 / _distance ** 2 * _direction
+        _phoretic_velocity = _v0 * _R ** 2 / _distance ** 2 * _direction
         return _phoretic_velocity
     else:
         _phoretic_velocity = np.array([0.0, 0.0])
@@ -107,10 +107,10 @@ def evolve_in_time(_position_list, _phi_list, _n_particles, _box_size, _v0, _cut
     _R, _D_T, _D_R, _v, _delta_t, _variance = parameters
     _position_array = np.zeros([_n_particles, 2, _n_timesteps + 1])
     _position_array[:, :, 0] = _position_list
-    _phoretic_velocity = np.array([0.0, 0.0])
     for t in range(_n_timesteps):
         print(f'Current timestep: {t}')
         for i in range(_n_particles):
+            _phoretic_velocity = np.array([0.0, 0.0])
             for j in range(_n_particles):
                 _phoretic_velocity += phoretic_interaction(_v0, _R, _position_array[i, :, t - 1],
                                                            _position_array[j, :, t - 1],
@@ -147,11 +147,12 @@ R *= 1e6
 
 for i in range(n_particles):
     rgb = np.random.randint(0, 255, 3)
+    ax1.plot(position_array[i, 0, :], position_array[i, 1, :], 'k', linewidth=0.7 ,alpha=0.1)
     ax1.plot(position_array[i, 0, -1] + R * np.cos(disc_vector), position_array[i, 1, -1] + R * np.sin(disc_vector),
              c='k')
     ax1.plot(position_array[i, 0, 0] + R * np.cos(disc_vector), position_array[i, 1, 0] + R * np.sin(disc_vector),
-             c='k', alpha=0.2)
-    # ax1.plot(position_array[i, 0, :], position_array[i, 1, :], 'k', alpha=0.5)
+             c='k', alpha=0.3)
+
 ax1.set_aspect('equal')
 ax1.set_xlabel('x [$\\mu$m]')
 ax1.set_xlim([0, box_size])
