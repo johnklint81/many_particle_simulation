@@ -5,7 +5,7 @@ import random
 R = 1e-6
 D_T = 1 * 1e-13
 D_R = 1
-v = 3e-6
+v = 2e-6
 v0 = 50 * 1e-6
 delta_t = 0.1
 variance = 1
@@ -90,24 +90,33 @@ def check_overlap(_position_list, _R, _n_particles):
 
 
 def outside_box(_position_list, _n_particles, _box_size):
+    _discontinuity_pos = np.ones(_n_particles)
     for i in range(_n_particles):
         if _position_list[i, 0] > _box_size:
             _position_list[i, 0] = _position_list[i, 0] - _box_size
+            _discontinuity_pos[i] = np.nan
         elif _position_list[i, 0] < 0:
             _position_list[i, 0] = _position_list[i, 0] + _box_size
+            _discontinuity_pos[i] = np.nan
         if _position_list[i, 1] > _box_size:
             _position_list[i, 1] = _position_list[i, 1] - _box_size
+            _discontinuity_pos[i] = np.nan
         elif _position_list[i, 1] < 0:
             _position_list[i, 1] = _position_list[i, 1] + _box_size
-    return _position_list
+            _discontinuity_pos[i] = np.nan
+    return _position_list, _discontinuity_pos
 
 
 def evolve_in_time(_position_list, _phi_list, _n_particles, _box_size, _v0, _cut_off_distance, _n_timesteps,
                    _parameters):
     _R, _D_T, _D_R, _v, _delta_t, _variance = parameters
     _position_array = np.zeros([_n_particles, 2, _n_timesteps + 1])
+    _discontinuity = np.ones([_n_particles, _n_timesteps + 1])
+    _discontinuity_pos = np.ones(_n_particles)
     _position_array[:, :, 0] = _position_list
+
     for t in range(_n_timesteps):
+
         print(f'Current timestep: {t}')
         for i in range(_n_particles):
             _phoretic_velocity = np.array([0.0, 0.0])
@@ -117,16 +126,19 @@ def evolve_in_time(_position_list, _phi_list, _n_particles, _box_size, _v0, _cut
                                                            _cut_off_distance)
             _position_list[i, :] = simulate_motion(_position_list[i, :], _phi_list[i], _phoretic_velocity, _delta_t,
                                                    _D_T, _D_R, _v, _v0, _R, _variance, _n_timesteps)
-            _position_list = outside_box(_position_list, _n_particles, _box_size)
-            _position_list = check_overlap(_position_list, _R, _n_particles)
-            _position_array[:, :, t + 1] = _position_list
-    return _position_array
+
+        _position_list, _discontinuity_pos = outside_box(_position_list, _n_particles, _box_size)
+        _position_list = check_overlap(_position_list, _R, _n_particles)
+        _position_array[:, :, t + 1] = _position_list
+        _discontinuity[:, t + 1] = _discontinuity_pos
+
+    return _position_array, _discontinuity
 
 
 position_list = initialize_positions(position_list, n_particles, box_size)
 phi_list = initialize_angles(phi_list, n_particles)
 position_list = check_overlap(position_list, R, n_particles)
-position_array = evolve_in_time(position_list, phi_list, n_particles, box_size, v0, cut_off_distance, n_timesteps,
+position_array, discontinuity = evolve_in_time(position_list, phi_list, n_particles, box_size, v0, cut_off_distance, n_timesteps,
                                 parameters)
 
 fig1, ax1 = plt.subplots(1, figsize=(8, 8))
@@ -134,6 +146,13 @@ disc_vector = np.linspace(0, 2 * np.pi, 100)
 position_array *= 1e6  # scale for micrometer
 box_size *= 1e6
 R *= 1e6
+
+position_array_x = position_array[:, 0, :]
+position_array_x = np.multiply(position_array_x, discontinuity)
+position_array_y = position_array[:, 1, :]
+position_array_y = np.multiply(position_array_y, discontinuity)
+
+# position_array = np.ma.masked_where(np.isnan(discontinuity), position_array)
 
 # color = ["#"+''.join([random.choice('0123456789ABCDEF') for j in range(6)])
 #              for i in range(n_particles)]
@@ -146,11 +165,10 @@ R *= 1e6
 #              c=color[i], linestyle='dashed', alpha=1)
 
 for i in range(n_particles):
-    rgb = np.random.randint(0, 255, 3)
-    ax1.plot(position_array[i, 0, :], position_array[i, 1, :], 'k', linewidth=0.7 ,alpha=0.1)
-    ax1.plot(position_array[i, 0, -1] + R * np.cos(disc_vector), position_array[i, 1, -1] + R * np.sin(disc_vector),
+    ax1.plot(position_array_x[i, :], position_array_y[i, :], 'k', linewidth=0.7, alpha=0.1)
+    ax1.plot(position_array_x[i, -1] + R * np.cos(disc_vector), position_array_y[i, -1] + R * np.sin(disc_vector),
              c='k')
-    ax1.plot(position_array[i, 0, 0] + R * np.cos(disc_vector), position_array[i, 1, 0] + R * np.sin(disc_vector),
+    ax1.plot(position_array_x[i, 0] + R * np.cos(disc_vector), position_array_y[i, 0] + R * np.sin(disc_vector),
              c='k', alpha=0.3)
 
 ax1.set_aspect('equal')
